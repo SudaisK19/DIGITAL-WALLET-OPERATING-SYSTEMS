@@ -9,3 +9,6 @@ Problem:
 The verifyCNrunner() needs parameters vector, starting index, length to search, target. Since we are using pthreads library only 1 argument can be passed.
 Solved:
 used struct to pass arguments
+
+To Do:
+Before implementing anyother functionality polish the current version thoroughly and document errors.
