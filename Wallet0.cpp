@@ -10,7 +10,12 @@ void readCSV(const string& filename, vector<string>& userList);
 void printCSV(vector<string> userList);
 int verifyCN(const string cardNumber, vector<string> userList);
 void* verifyCNrunner(void* args);
-//void verifyCNrunner(vector<string> userList, int startIdx, int length, const string targetCN, int& resultIndex);
+struct ThreadArgs {
+    vector<string>* userList;
+    int startIdx;
+    int length;
+    string targetCN;
+};
 
 int main() {
     vector<string> userList;
@@ -34,7 +39,7 @@ int main() {
         }
 
         index = verifyCN(cardNumber, userList);
-        if (index > 0) {
+        if (index >= 0) {
             cout << "Card number verified. User found at index " << index << "." << endl;
             break;
         } else {
@@ -54,7 +59,7 @@ void readCSV(const string& filename, vector<string>& userList) {
     ifstream file(filename);
     if (!file.is_open()) {
         cout << "Error opening file: " << filename << endl;
-        return;
+        exit(0);
     }
 
     string line;
@@ -92,29 +97,42 @@ int verifyCN(const string cardNumber, vector<string> userList) {
         int startIdx = i * chunkSize;
         int length = min(chunkSize, numUsers - startIdx); // Ensure length doesn't exceed the number of users
         
-        //for GPT: create a string called args for verifyCNrunner() as userList startIdx length cardNumber address of resultIndex
+        ThreadArgs* args = new ThreadArgs;
+        args->userList = &userList;
+        args->startIdx = startIdx;
+        args->length = length;
+        args->targetCN = cardNumber;
 
-        pthread_create(&threads[i], nullptr, verifyCNrunner, &args);
+        pthread_create(&threads[i], nullptr, verifyCNrunner, args);
     }
 
     // Join threads
     for (int i = 0; i < numThreads; ++i) {
-        pthread_join(threads[i], nullptr);
+        int* returnedIndex;
+        pthread_join(threads[i], reinterpret_cast<void**>(&returnedIndex));
+        if (*returnedIndex != -1) {
+            resultIndex = *returnedIndex;
+            break;
+        }
     }
 
     // Return result index
     return resultIndex;
 }
 // Define verifyCNrunner function
-void* verifyCNrunner(void* args) {
-    // Extract arguments
-    // Search the user list
+void* verifyCNrunner(void* arg) {
+    ThreadArgs* args = reinterpret_cast<ThreadArgs*>(arg);
+    vector<string>& userList = *(args->userList);
+    int startIdx = args->startIdx;
+    int length = args->length;
+    string targetCN = args->targetCN;
+    int* resultIndex = new int(-1);
+
     for (int i = startIdx; i < startIdx + length; i++) {
         if (userList[i] == targetCN) {
-            resultIndex = i;
-            return nullptr;
+            *resultIndex = i;
+            break;
         }
     }
-    resultIndex = -1;
-    return nullptr;
+    pthread_exit(resultIndex);
 }
