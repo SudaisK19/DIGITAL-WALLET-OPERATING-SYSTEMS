@@ -7,3 +7,5 @@ verifyCNrunner() performs a linear search on the specified part of vector.
 
 Problem:
 The verifyCNrunner() needs parameters vector, starting index, length to search, target. Since we are using pthreads library only 1 argument can be passed.
+Solved:
+used struct to pass arguments
