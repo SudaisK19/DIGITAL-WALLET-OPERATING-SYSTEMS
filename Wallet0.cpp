@@ -76,12 +76,21 @@ void readCSV(const string& filename, vector<string>& userList) {
 }
 
 void printCSV(vector<string> userList) {
+    /*
+        This function prints the Vector which 
+        represents the CSV file
+    */
     for (const auto& user : userList) {
         cout << user << endl;
     }
 }
 
 int verifyCN(const string cardNumber, vector<string> userList) {
+    /*
+        This function creates n number of threads
+        and implements fair load for linear search
+        among multiple threads [data parallelism]
+    */
     int numUsers = userList.size();
     int numThreads = 4;
     // Calculate the smallest multiple of numThreads that is greater than or equal to numUsers
