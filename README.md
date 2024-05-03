@@ -1,4 +1,10 @@
-So far:
+3rd May:
+-System("cls") and System("pause") do not work on linux. FIXED and MADE SAFER
+-Potential issue: CSV file is not read properly. NO ISSUE
+-Changed ReadCSV() for better looking output
+JOINING ALL CODE:
+
+[On Upload]:
 Code will read CSV file and create a vector in main()
 user will input card number
 verifyCN() will run
