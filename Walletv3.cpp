@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <pthread.h>
+#include <mutex>
+#include <unistd.h> 
 
 using namespace std;
 
@@ -13,6 +15,14 @@ int verifyCN(const string cardNumber, vector<string> userList);
 void* verifyCNrunner(void* args);
 void balanceInquiry(int index, const vector<string>& userList);
 void clearScreen();
+void writeCSV(const string& filename, const vector<string>& data);
+bool verifyAmount(float amount,int index,const vector<string> userList);
+bool verifyDeposit(float amount);
+void sendMoney(float amount,int index, vector<string>& userList);
+void AddMoney(float amount,int index, vector<string>& userList);
+
+void receipt(int index, int mode, const vector<string> userList);
+
 
 struct ThreadArgs {
     vector<string>* userList;
@@ -22,6 +32,8 @@ struct ThreadArgs {
 };
 
 volatile bool found = false; // Shared memory variable to indicate if target is found
+
+mutex mtx;
 
 int main() {
     vector<string> userList;
@@ -73,7 +85,7 @@ int main() {
         // Display menu
         cout << "E-Wallet Menu\n";
         cout << "1. Send Money\n";
-        cout << "2. Receive Money\n";
+        cout << "2. Deposit Money\n";
         cout << "3. Balance Inquiry\n";
         cout << "4. Log Out\n";
         cout << "Choose an option (1-4): ";
@@ -83,14 +95,60 @@ int main() {
 
         // Switch structure for menu actions
         switch (choice) {
-            //case 1:
-                //sendMoney(); // Implement your send money logic here
-                //break;
-
-            //case 2:
-              //  receiveMoney(); // Implement your receive money logic here
-                //break;
-
+            case 1:
+                float amount;
+                clearScreen();
+                cout << "Enter the amount you want to send: ";
+               	cin >> amount;
+               	
+               	if (verifyAmount(amount,index,userList)){
+               	
+		cout<<"\nAmount verified!";
+		
+		
+                sendMoney(amount,index, userList);
+                writeCSV("Users.csv", userList);
+                cout<<endl<<amount<<" Sent";
+               	receipt(index, 0, userList);
+               	cin.ignore();
+               	cin.get();
+               	}
+		else{
+		
+               	cout << "\nInsufficient Balance. Check your Balance via Balance Inquiry.";
+               	cout << "\nIncrease your Balance using Deposit Money.";
+               	cin.ignore();
+               	cin.get();
+		
+                }
+                break;
+           case 2:
+                float Deposit;
+                clearScreen();
+                cout << "Enter the amount you want to Deposit: ";
+               	cin >> Deposit;
+               	
+               	if (verifyDeposit(Deposit)){
+               	
+		cout<<"\nAmount verified!";
+		
+		
+                AddMoney(Deposit,index, userList);
+                writeCSV("Users.csv", userList);
+               	cout<<endl<<Deposit<<" received";
+               	receipt(index, 1, userList);
+               	cin.ignore();
+               	cin.get();
+               	}
+		else{
+		
+               	cout << "\nDeposit Limit Exceeded.";
+               	cout << "\nRs. 20,000 at a time";
+               	cin.ignore();
+               	cin.get();
+		
+                }
+                break;
             case 3:
             	
 		balanceInquiry(index,userList);
@@ -115,6 +173,38 @@ int main() {
     	
     	
 	return 0;
+}
+
+bool verifyAmount(float amount,int index,const vector<string> userList)
+{
+	//cout<<"float"<<amount<<"index+2"<<userList[index+2]<<endl;
+	//cout<<stof(userList[index+2])<<endl;
+	if(amount > stof(userList[index+2]))
+		return false;
+	return true;
+}
+
+
+
+bool verifyDeposit(float amount)
+{
+	//cout<<"float"<<amount<<"index+2"<<userList[index+2]<<endl;
+	//cout<<stof(userList[index+2])<<endl;
+	if(amount > 20000)
+		return false;
+	return true;
+}
+
+void sendMoney(float amount,int index, vector<string>& userList){
+	float old = stof(userList[index+2]);
+	old -= amount;
+	userList[index+2] = to_string(old);
+}
+
+void AddMoney(float amount,int index, vector<string>& userList){
+	float old = stof(userList[index+2]);
+	old += amount;
+	userList[index+2] = to_string(old);
 }
 
 void clearScreen(){
@@ -144,6 +234,49 @@ void readCSV(const string& filename, vector<string>& userList) {
 
     file.close();
 }
+
+void receipt(int index, int mode, const vector<string> userList){
+
+	cout<<"\n--- Receipt ---"<<endl;
+	if(mode ==0){
+		cout<<"After Deducted: ";
+	}
+	else{
+		cout<<"After Deposited: ";
+	}
+	cout<<userList[index+2];
+	cout<<"\nCard Number: "<<userList[index]<<"\nFull name: "<<userList[index+1]<<endl;
+}
+
+void writeCSV(const string& filename, const vector<string>& data) {
+    // Open the file in write mode
+    ofstream file(filename);
+
+    if (!file.is_open()) {
+        cerr << "Error opening file: " << filename << endl;
+        exit(1);
+    }
+	int liner = 0;
+    // Write the data to the file, separating each element with a comma
+    for (size_t i = 0; i < data.size(); i++) {
+        liner++;
+        file << data[i]; 
+
+        
+        if (i < data.size() - 1 && liner != 3) {
+            file << ","; // Separate elements with commas
+        }
+        if(liner==3){
+        	file<<endl;
+        	liner = 0;
+        }
+        
+        
+    }
+
+    file.close(); // Close the file
+}
+
 
 void printCSV(vector<string> userList) {
     /*
@@ -229,7 +362,7 @@ void* verifyCNrunner(void* arg) {
     		pthread_exit(resultIndex);        
         }
         if (userList[i] == targetCN) {
-      	    cout<<"D> Found by Thread "<<tid<<" Exiting..."<<endl;
+      	    cout<<"D> Found at ["<<i<<"] by Thread "<<tid<<" Exiting..."<<endl;
     	
     	    *resultIndex = i;	
             found = true; //set flag true if found
@@ -256,3 +389,17 @@ void balanceInquiry(int index, const vector<string>& userList){
     cin.ignore();
     cin.get();
 }
+
+/*
+card#,operation,amount
+card#,operation,amount
+card#,operation,amount
+card#,operation,amount
+
+kon kon login kiya
+kon kon deposit
+kon kon withdraw
+
+total withdraw amount
+total deposit amount
+*/
