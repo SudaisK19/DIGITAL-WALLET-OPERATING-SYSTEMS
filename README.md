@@ -1,6 +1,6 @@
 3rd May:
-
-
+-Implemented VerifyCN() thread shared memory communication
+-Implemented Demonstration
 -Implemented A working Menu
 -Implemented Balance Inquiry
 -System("cls") and System("pause") do not work on linux => FIXED
