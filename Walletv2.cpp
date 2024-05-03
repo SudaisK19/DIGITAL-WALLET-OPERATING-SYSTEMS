@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <pthread.h>
+
 using namespace std;
 
 void readCSV(const string& filename, vector<string>& userList);
@@ -20,6 +21,8 @@ struct ThreadArgs {
     string targetCN;
 };
 
+volatile bool found = false; // Shared memory variable to indicate if target is found
+
 int main() {
     vector<string> userList;
     readCSV("Users.csv", userList); // fill the userList
@@ -31,11 +34,14 @@ int main() {
 	
     // Loop to prompt user for card number input
     	// Log in Screen
-    	
-    Login:
     
     int index;
+    
+    Login:
+    
+        
     do {
+    	found = false; // Reset flag for each search
         clearScreen();
         cout << "Enter card number (or 'quit' to exit): ";
         cin >> cardNumber;
@@ -50,7 +56,7 @@ int main() {
             cout << "Card number verified. User found at index " << index << "." << endl;
             break;
         } else {
-            cout << "Card number not found. Please try again." << endl;
+            cout << "Card number not found. Please try again." << endl; 
             
             cin.ignore(); 
             cin.get(); //safe replacement for system("pause");
@@ -58,6 +64,7 @@ int main() {
         }
     } while (true);
 
+	
 	//When verified the loop breaks to the menu below: result-> index is now aqcuired	
 		//menu
 	int choice;
@@ -169,7 +176,7 @@ int verifyCN(const string cardNumber, vector<string> userList) {
     int chunkSize = (numUsers / numThreads) + ((numUsers % numThreads != 0) ? 1 : 0);
 
     pthread_t threads[numThreads];
-
+    
     // Variable to hold result index
     int resultIndex = -1;
 
@@ -185,18 +192,23 @@ int verifyCN(const string cardNumber, vector<string> userList) {
         args->targetCN = cardNumber;
 
         pthread_create(&threads[i], nullptr, verifyCNrunner, args);
+        cout<<"D> thread created: "<< threads[i]<<endl;
     }
-
+	
+    
     // Join threads
+    int* returnedIndex;
     for (int i = 0; i < numThreads; ++i) {
-        int* returnedIndex;
+    	
+    	
         pthread_join(threads[i], reinterpret_cast<void**>(&returnedIndex));
+	cout<<"D> Thread "<<threads[i]<<" joined"<<endl;
         if (*returnedIndex != -1) {
             resultIndex = *returnedIndex;
-            break;
         }
     }
-
+    cin.ignore();
+    cin.get();
     // Return result index
     return resultIndex;
 }
@@ -208,13 +220,24 @@ void* verifyCNrunner(void* arg) {
     int length = args->length;
     string targetCN = args->targetCN;
     int* resultIndex = new int(-1);
-
+    pthread_t tid = pthread_self(); // get current thread id
+    cout<<"D> Thread "<<tid<<" searching ("<<startIdx<<" - "<<startIdx+length<<")"<<endl;
+    
     for (int i = startIdx; i < startIdx + length; i++) {
+    	if(found){
+    		cout<<"D> Found! while "<<tid<<" was searching ["<<i<<"], Exiting..."<<endl;
+    		pthread_exit(resultIndex);        
+        }
         if (userList[i] == targetCN) {
-            *resultIndex = i;
-            break;
+      	    cout<<"D> Found by Thread "<<tid<<" Exiting..."<<endl;
+    	
+    	    *resultIndex = i;	
+            found = true; //set flag true if found
+    	    pthread_exit(resultIndex);        
+      
         }
     }
+    cout<<"D> Thread "<<tid<<" Finished Search Exiting..."<<endl;
     pthread_exit(resultIndex);
 }
 
