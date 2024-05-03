@@ -1,9 +1,12 @@
 3rd May:
+-Implemented A working Menu
+-Implemented Balance Inquiry
+-System("cls") and System("pause") do not work on linux => FIXED
+-Potential issue: CSV file is not read properly => NO ISSUE
+-Polished ReadCSV()
 
--System("cls") and System("pause") do not work on linux. FIXED and MADE SAFER
--Potential issue: CSV file is not read properly. NO ISSUE
--Changed ReadCSV() for better looking output
-JOINING ALL CODE:
+balanceInquiry() will print user info
+clearScreen() will clear terminal screen
 
 [On Upload]:
 
